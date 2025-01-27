@@ -26,7 +26,12 @@ public class Lexer {
     private char peek() {
         if (isEnd()) return '\0';
         return data.charAt(current);
-      }
+    }
+
+    private char peekNext() {
+        if (current + 1 >= data.length()) return '\0';
+        return data.charAt(current + 1 );
+    }
     
 
     private void addToken(TokenType type, Object literal){
@@ -47,18 +52,38 @@ public class Lexer {
     }
 
     private void handleNumber(){
+        while(isDigit(peek())) getNextChar();
 
+        if(peek() == '.' && isDigit(peekNext())){
+            getNextChar();
+            while(isDigit(peek())) getNextChar();
+        }
+
+        addToken(NUMBER, Double.parseDouble(data.substring(start+1, current-1)));
     }
 
     private void handleString(){
+        while(peek() != '"' && !isEnd()){
+            if(peek() == '\n') line++;
+            getNextChar();
+        }
 
+        if(isEnd()){
+            Lox.error(line, "Unterminated string.");
+            return;
+        }
+        getNextChar();
+        String result = data.substring(start+1, current-1);
+        addToken(STRING, result);
     }
 
-    private void handleIdentifier(){
-        
-    }
+    private void handleIdentifier() {
+        while (isAlphaNumeric(peek())) getNextChar();
+    
+        addToken(IDENTIFIER);
+      }
 
-    private boolean isAlphanumeric(char c) {
+    private boolean isAlphaNumeric(char c) {
         return (c >= 'a' && c <= 'z') ||
                (c >= 'A' && c <= 'Z') ||
                 c == '_';
@@ -122,7 +147,7 @@ public class Lexer {
             default:
                 if(isDigit(c)){
                     handleNumber();
-                } else if(isAlphanumeric(c)){
+                } else if(isAlphaNumeric(c)){
                     handleIdentifier();
                 } else {
                     Lox.error(line, "Unexpected Character");
